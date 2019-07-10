@@ -1,2 +1,7 @@
 # environment variables
 .env
+
+# junk files
+.DS_Store
+.idea/
+__pycache__/
