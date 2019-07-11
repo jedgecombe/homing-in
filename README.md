@@ -5,6 +5,10 @@
 3. `cd` into `marvy-yardy`
 4. `pipenv shell`
 
+
+# Clone repo
+`git clone https://github.com/jedgecombe/marvy-yardy.git`
+
 # Get google distance matrix API key
 1. copy `.env.example` and save as `.env`
 2. get your `GOOGLE_API` from [here](https://console.cloud.google.com/google/maps-apis/apis/distance-matrix-backend.googleapis.com)
