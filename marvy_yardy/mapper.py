@@ -44,7 +44,12 @@ class Mapper:
         </html>"""
         return html
 
-    def create_map_with_points(self, zoom_level=13):
+    def create_map_with_points(self, reference_df, zoom_level=13):
+        ref_df = pd.read_csv(reference_df)
+        interested = ref_df[ref_df['category'] == 'interested']
+        remove = ref_df[ref_df['category'] == 'remove']
+        interested_list = [] if len(interested) == 0 else interested['property_id'].tolist()
+        remove_list = [] if len(remove) == 0 else remove['property_id'].tolist()
         # remove_df = pd.read_csv(remove_df)
         # interest_df = pd.read_csv(interested_df)
         # TODO reinstate above dfs
@@ -53,13 +58,15 @@ class Mapper:
         centre_lon = self.df['longitude'].mean()
         self.create_basemap(centre_lat, centre_lon, zoom_level)
         for index, row in self.df.iterrows():
-            if not np.isnan(row['latitude']):
+            if not np.isnan(row['latitude']) and row['id'] not in remove_list:
                 ring_colour = 'black'
-                fill_colour = 'blue'
+                fill_colour = 'green' if row['id'] in interested_list else 'blue'
                 score = row['total_score']
                 tooltip = f"""id: {row["id"]},  score: {score},  beds: {row["beds"]},  tenure: {row["tenure"]},
-                  travel: {row["travel_time_loc1"]} (mins), {row['url']},  <a href = "{row['url']}">open listing</a>"""
-                iframe = branca.element.IFrame(html=tooltip, width=800, height=500)
+                price: {row["price"]},  travel: {row["travel_time_loc1"]} (mins), 
+                 travel 2: {row["travel_time_loc2"]} (mins), 
+                   {row['url']},  <a href = "{row['url']}">open listing</a>"""
+                iframe = branca.element.IFrame(html=tooltip, width=1200, height=750)
                 popup = folium.Popup(iframe, parse_html=True, max_width=2650)
                 folium.CircleMarker(location=(row['latitude'], row['longitude']), radius=score, color=ring_colour,
                                     fill_color=fill_colour, fill=True,

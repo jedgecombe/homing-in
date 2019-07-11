@@ -128,7 +128,7 @@ class RightMoveCrawler(Crawler):
         df = pd.DataFrame({'price': prices[:df_len], 'description': titles[:df_len], 'address': addresses[:df_len],
                            'url': weblinks[:df_len], 'agent_url': agent_urls[:df_len], 'id': ids})
         df.dropna(inplace=True)
-        # TODO think there might be duplicate links to the same page, perhaps strip other columns and compare those
+        df = df[df['price'].apply(lambda x: x.isnumeric())]  # drop non numeric
         df['price'] = df['price'].astype(int)
         df['scrape_time'] = datetime.today()
         return df
