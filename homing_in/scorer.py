@@ -47,4 +47,9 @@ class Scorer:
         return score
 
 
+if __name__ == '__main__':
+    a = Scorer.travel_time(50, 30, 50, 10, -0.5, -3)
+    b = 1
 
+
+a = Scorer.travel_time(50, 30, 50, 10, -2, -3)

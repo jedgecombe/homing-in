@@ -8,7 +8,7 @@ from lxml import html
 import pandas as pd
 import requests
 
-from marvy_yardy.search_constructors import SearchConstructor, FixedSearch, RightMoveSearch
+from homing_in.search_constructor import SearchConstructor, FixedSearch, RightMoveSearch
 
 logger = logging.getLogger(__name__)
 
@@ -129,8 +129,9 @@ class RightMoveCrawler(Crawler):
                            'url': weblinks[:df_len], 'agent_url': agent_urls[:df_len], 'id': ids})
         df.dropna(inplace=True)
         df = df[df['price'].apply(lambda x: x.isnumeric())]  # drop non numeric
-        df['price'] = df['price'].astype(int)
-        df['scrape_time'] = datetime.today()
+        if len(df) > 0:
+            df['price'] = df['price'].astype(int)
+            df['scrape_time'] = datetime.today()
         return df
 
     def _scrape_page(self, request_content) -> pd.DataFrame:
@@ -180,7 +181,6 @@ class RightMoveCrawler(Crawler):
 
     def scrape(self, max_pages: int = 10) -> pd.DataFrame:
         dfs = []
-        # TODO excluding final page for now as index does not work
         for pg in range(1, min(self.page_count, max_pages) + 1, 1):
             idx = self._construct_index(pg)
             pg_url = f'{self.search.response.url}&index={idx}'
@@ -191,7 +191,6 @@ class RightMoveCrawler(Crawler):
             dfs.append(pg_data)
             # results[pg] = pg_data
         results = pd.concat(dfs)
-        results.to_csv('non_dedupe.csv')
         results.drop_duplicates(subset=['url'], inplace=True)
         property_details = self._scrape_properties(results)
 

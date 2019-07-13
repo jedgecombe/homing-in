@@ -63,12 +63,12 @@ class Mapper:
                 fill_colour = 'green' if row['id'] in interested_list else 'blue'
                 score = row['total_score']
                 tooltip = f"""id: {row["id"]},  score: {score},  beds: {row["beds"]},  tenure: {row["tenure"]},
-                price: {row["price"]},  travel: {row["travel_time_loc1"]} (mins), 
-                 travel 2: {row["travel_time_loc2"]} (mins), 
+                price: {row["price"]},  travel canary wharf: {row["travel_time_cw"]} (mins), 
+                 travel CP: {row["travel_time_cp"]} (mins), travel from strand, late: {row["travel_time_from_strand"]} (mins), 
                    {row['url']},  <a href = "{row['url']}">open listing</a>"""
                 iframe = branca.element.IFrame(html=tooltip, width=1200, height=750)
                 popup = folium.Popup(iframe, parse_html=True, max_width=2650)
-                folium.CircleMarker(location=(row['latitude'], row['longitude']), radius=score, color=ring_colour,
+                folium.CircleMarker(location=(row['latitude'], row['longitude']), radius=score/2, color=ring_colour,
                                     fill_color=fill_colour, fill=True,
                                     popup=popup).add_to(self.map)
             else:

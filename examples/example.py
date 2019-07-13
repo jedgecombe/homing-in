@@ -2,11 +2,11 @@ import logging
 
 import pandas as pd
 
-from marvy_yardy.search_constructors import SearchConstructor
-from marvy_yardy.crawlers import Crawler
-from marvy_yardy.mapper import Mapper
-from marvy_yardy.travel_time import travel_time
-from marvy_yardy.scorer import Scorer
+from homing_in.search_constructor import SearchConstructor
+from homing_in.crawlers import Crawler
+from homing_in.mapper import Mapper
+from homing_in.travel_time import travel_time
+from homing_in.scorer import Scorer
 
 logging.basicConfig(
     format='%(asctime)s.%(msecs)03d - %(name)s:%(levelname)s - %(message)s',
@@ -16,11 +16,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-DEST_COORDS = (51.50374735798869, -0.01959085464477539)  # canary wharf
-DEST_COORDS_2 = (51.51412426735259, 0.11815667152404787) # strand
+CANARY_WHARF = (51.50374735798869, -0.01959085464477539)  # canary wharf
+STRAND = (51.51412426735259, 0.11815667152404787)  # strand
+CP = (51.415401341306435, -0.07308483123779297)  # CP
 
-DEPARTURE_TIME = '2019/07/17 08:00:00'
-DEPARTURE_TIME_2 = '2019/07/19 22:00:00'
+DEPARTURE_TIME_MORN = '2019/07/17 08:00:00'
+DEPARTURE_TIME_EVE = '2019/07/17 18:00:00'
+DEPARTURE_TIME_LATE = '2019/07/19 22:00:00'
 
 TRANSPORT_MODE = 'TRANSIT'
 
@@ -47,48 +49,54 @@ SCORE_MAPPING = {
         'score_per_ten_thousand_over': -1.0
     },
     'travel_time': {
-        'ideal_minutes': 30,
-        'bad_minutes': 55,
+        'ideal_minutes': 25,
+        'bad_minutes': 45,
         'ideal_score': 10,
-        'over_ideal_cost': -0.4,
-        'over_bad_cost': -0.8
+        'over_ideal_cost': - 10/(45-25),
+        'over_bad_cost': - 10/(45-25)*2
     },
     'travel_time_2': {
         'ideal_minutes': 40,
         'bad_minutes': 55,
         'ideal_score': 10,
-        'over_ideal_cost': -0.66,
-        'over_bad_cost': -1
+        'over_ideal_cost': - 10/(55-40),
+        'over_bad_cost': - 10/(55-40)*2
     }
 }
 
 
-URL = 'https://www.rightmove.co.uk/property-for-sale/find.html?searchType=SALE&locationIdentifier=STATION%5E4514&insId=2&radius=3.0&minPrice=550000&maxPrice=650000&minBedrooms=2&maxBedrooms=3&displayPropertyType=&maxDaysSinceAdded=&_includeSSTC=on&sortByPriceDescending=&primaryDisplayPropertyType=&secondaryDisplayPropertyType=&oldDisplayPropertyType=&oldPrimaryDisplayPropertyType=&newHome=&auction=false'
+URL = 'https://www.rightmove.co.uk/property-for-sale/find.html?locationIdentifier=STATION%5E5792&maxBedrooms=3&minBedrooms=2&maxPrice=700000&minPrice=550000&radius=10.0&propertyTypes=&maxDaysSinceAdded=14&includeSSTC=false&mustHave=&dontShow=&furnishTypes=&keywords='
 
 # construct initial search url
 uc = SearchConstructor(url_type='fixed').create()
 uc.search(URL)
 
 # scrape rightmove
-rm = Crawler(uc).create()
-rm_data = rm.scrape(max_pages=35)
-rm_data.to_csv(FILENAME, index=False)
+# rm = Crawler(uc).create()
+# rm_data = rm.scrape(max_pages=42)
+# rm_data.to_csv(FILENAME, index=False)
 
 # travel time
-rm_data = pd.read_csv(FILENAME)
-rm_data['travel_time_loc1'] = rm_data.apply(lambda x: travel_time(
-    start_coords=(x['latitude'], x['longitude']),
-    end_coords=DEST_COORDS,
-    departure_time=DEPARTURE_TIME,
-    mode=TRANSPORT_MODE
-), axis=1)
-rm_data['travel_time_loc2'] = rm_data.apply(lambda x: travel_time(
-    start_coords=DEST_COORDS_2,
-    end_coords=(x['latitude'], x['longitude']),
-    departure_time=DEPARTURE_TIME_2,
-    mode=TRANSPORT_MODE
-), axis=1)
-rm_data.to_csv(FILENAME, index=False)
+# rm_data = pd.read_csv(FILENAME)
+# rm_data['travel_time_cw'] = rm_data.apply(lambda x: travel_time(
+#     start_coords=(x['latitude'], x['longitude']),
+#     end_coords=CANARY_WHARF,
+#     departure_time=DEPARTURE_TIME_MORN,
+#     mode=TRANSPORT_MODE
+# ), axis=1)
+# rm_data['travel_time_from_strand'] = rm_data.apply(lambda x: travel_time(
+#     start_coords=STRAND,
+#     end_coords=(x['latitude'], x['longitude']),
+#     departure_time=DEPARTURE_TIME_LATE,
+#     mode=TRANSPORT_MODE
+# ), axis=1)
+# rm_data['travel_time_cp'] = rm_data.apply(lambda x: travel_time(
+#     start_coords=(x['latitude'], x['longitude']),
+#     end_coords=CP,
+#     departure_time=DEPARTURE_TIME_EVE,
+#     mode=TRANSPORT_MODE
+# ), axis=1)
+# rm_data.to_csv(FILENAME, index=False)
 
 # # run scoring
 rm_data = pd.read_csv(FILENAME)
@@ -99,23 +107,32 @@ rm_data['price_score'] = rm_data.apply(lambda x: Scorer.price(x['price'], SCORE_
                                                               SCORE_MAPPING['price']['score_per_ten_thousand_under'],
                                                               SCORE_MAPPING['price']['score_per_ten_thousand_over']
                                                               ), axis=1)
-rm_data['tt_score1'] = rm_data.apply(lambda x: Scorer.travel_time(
-    x['travel_time_loc1'],
+rm_data['tt_score_cw'] = rm_data.apply(lambda x: Scorer.travel_time(
+    x['travel_time_cw'],
     ideal_minutes=SCORE_MAPPING['travel_time']['ideal_minutes'],
     bad_minutes=SCORE_MAPPING['travel_time']['bad_minutes'],
     ideal_score=SCORE_MAPPING['travel_time']['ideal_score'],
     over_ideal_cost=SCORE_MAPPING['travel_time']['over_ideal_cost'],
     over_bad_cost=SCORE_MAPPING['travel_time']['over_bad_cost']
 ), axis=1)
-rm_data['tt_score2'] = rm_data.apply(lambda x: Scorer.travel_time(
-    x['travel_time_loc2'],
+rm_data['tt_score_from_strand'] = rm_data.apply(lambda x: Scorer.travel_time(
+    x['travel_time_from_strand'],
     ideal_minutes=SCORE_MAPPING['travel_time_2']['ideal_minutes'],
     bad_minutes=SCORE_MAPPING['travel_time_2']['bad_minutes'],
     ideal_score=SCORE_MAPPING['travel_time_2']['ideal_score'],
     over_ideal_cost=SCORE_MAPPING['travel_time_2']['over_ideal_cost'],
     over_bad_cost=SCORE_MAPPING['travel_time_2']['over_bad_cost']
 ), axis=1)
-rm_data['total_score'] = rm_data[['bedroom_score', 'tenure_score', 'price_score', 'tt_score1', 'tt_score2']].sum(axis=1)
+rm_data['tt_score_cp'] = rm_data.apply(lambda x: Scorer.travel_time(
+    x['travel_time_cp'],
+    ideal_minutes=SCORE_MAPPING['travel_time']['ideal_minutes'],
+    bad_minutes=SCORE_MAPPING['travel_time']['bad_minutes'],
+    ideal_score=SCORE_MAPPING['travel_time']['ideal_score'],
+    over_ideal_cost=SCORE_MAPPING['travel_time']['over_ideal_cost'],
+    over_bad_cost=SCORE_MAPPING['travel_time']['over_bad_cost']
+), axis=1)*2
+rm_data['total_score'] = rm_data[['bedroom_score', 'tenure_score', 'price_score',
+                                  'tt_score_cw', 'tt_score_from_strand', 'tt_score_cp']].sum(axis=1)
 rm_data.to_csv(FILENAME, index=False)
 
 # map
