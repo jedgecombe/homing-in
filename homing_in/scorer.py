@@ -15,14 +15,15 @@ class Scorer:
         return score
 
     @classmethod
-    def price(cls, price: int, max_desired: int, score_per_ten_thousand_under: int, score_per_ten_thousand_over: int):
-        diff_to_desired = (max_desired - price) / 10000
+    def price(cls, price: int, max_desired: int, score_per_under: int, score_per_over: int,
+              units: int):
+        diff_to_desired = (max_desired - price) / units
         if diff_to_desired == 0:
             score = 0
         elif diff_to_desired > 0:
-            score = diff_to_desired * score_per_ten_thousand_under
+            score = diff_to_desired * score_per_under
         else:  # diff_to_desired < 0
-            score = diff_to_desired * score_per_ten_thousand_over
+            score = abs(diff_to_desired) * score_per_over
         return score
 
     @classmethod
@@ -49,7 +50,3 @@ class Scorer:
 
 if __name__ == '__main__':
     a = Scorer.travel_time(50, 30, 50, 10, -0.5, -3)
-    b = 1
-
-
-a = Scorer.travel_time(50, 30, 50, 10, -2, -3)

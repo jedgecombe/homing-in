@@ -98,7 +98,10 @@ class RightMoveCrawler(Crawler):
         return tenure
 
     def _get_property_coords(self, html_tree) -> tuple:
-        xp = ".//*[@id='description']/div/div[2]/div[2]/div/a/img"
+        if self.search.search_type == 'buy':
+            xp = ".//*[@id='description']/div/div[2]/div[2]/div/a/img"
+        else:  # self.search.search_type == 'rent':
+            xp = "//*[@id='description']/div/div[2]/div[1]/div/a/img"
         map_resp = html_tree.xpath(xp)
         if len(map_resp) > 0:
             map_source = map_resp[0].attrib['src']
@@ -121,14 +124,27 @@ class RightMoveCrawler(Crawler):
         base = 'http://www.rightmove.co.uk'
         return [f'{base}{x}' for x in append_list]
 
+    @staticmethod
+    def _rental_price_convert(price):
+        if 'pcm' in price:
+            out = int(price.replace('pcm', ''))
+        elif 'pw' in price:
+            out = int(price.replace('pw', ''))*4.33
+        else:
+            out = 'price'
+            logger.warning(f'PRICE: {price}')
+        return out
+
     def _scrape_to_df(self, prices: list, titles: list, addresses: list, weblinks: list,
                       agent_urls: list, ids: list) -> pd.DataFrame:
 
-        df_len = len(ids)  # there can be blank cards for some of the fields
+        df_len = min([len(ids), len(prices), len(titles), len(addresses), len(weblinks), len(agent_urls)]) # there can be blank cards for some of the fields
         df = pd.DataFrame({'price': prices[:df_len], 'description': titles[:df_len], 'address': addresses[:df_len],
-                           'url': weblinks[:df_len], 'agent_url': agent_urls[:df_len], 'id': ids})
+                           'url': weblinks[:df_len], 'agent_url': agent_urls[:df_len], 'id': ids[:df_len]})
         df.dropna(inplace=True)
-        df = df[df['price'].apply(lambda x: x.isnumeric())]  # drop non numeric
+        if self.search.search_type == 'rent':
+            df['price'] = df['price'].map(lambda x: self._rental_price_convert(x))
+        # df = df[df['price'].apply(lambda x: x.isnumeric())]  # drop non numeric
         if len(df) > 0:
             df['price'] = df['price'].astype(int)
             df['scrape_time'] = datetime.today()
